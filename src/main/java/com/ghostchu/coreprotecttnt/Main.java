@@ -286,14 +286,13 @@ public class Main extends JavaPlugin implements Listener {
 
     @EventHandler(ignoreCancelled = true, priority = EventPriority.MONITOR)
     public void onPaintingHit(EntityDamageByEntityEvent e) {
-        if (!(e.getEntity() instanceof Painting)) {
+        if (!(e.getEntity() instanceof Painting painting)) {
             return;
         }
         ConfigurationSection section = Util.bakeConfigSection(getConfig(), "painting");
         if (!section.getBoolean("enable", true)) {
             return;
         }
-        Painting painting = (Painting) e.getEntity();
         if (painting.isInvulnerable()) {
             return;
         }
