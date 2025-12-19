@@ -12,11 +12,13 @@ public class Util {
         if (message == null || message.isEmpty()) {
             return; // Do not send empty message
         }
-        String msg = ChatColor.translateAlternateColorCodes('&', message);
-        for (Entity around : location.getWorld().getNearbyEntities(location, 15, 15, 15, (entity) -> entity instanceof Player)) {
-            around.sendMessage(msg);
+        if (location == null || location.getWorld() == null) {
+            return; // Invalid location
         }
-
+        String msg = ChatColor.translateAlternateColorCodes('&', message);
+        for (Entity entity : location.getWorld().getNearbyEntities(location, 15, 15, 15, (e) -> e instanceof Player)) {
+            ((Player) entity).sendMessage(msg);
+        }
     }
 
     public static ConfigurationSection bakeConfigSection(Configuration configuration, String path) {

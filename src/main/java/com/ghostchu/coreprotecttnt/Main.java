@@ -153,30 +153,32 @@ public class Main extends JavaPlugin implements Listener {
     // Any projectile shoot (listener)
     @EventHandler(ignoreCancelled = true, priority = EventPriority.MONITOR)
     public void onProjectileLaunch(ProjectileLaunchEvent e) {
-        if (e.getEntity().getShooter() == null) {
+        ProjectileSource projectileSource = e.getEntity().getShooter();
+        if (projectileSource == null) {
             return;
         }
-        ProjectileSource projectileSource = e.getEntity().getShooter();
-        String source = "";
+        
+        StringBuilder source = new StringBuilder();
         if (!(projectileSource instanceof Player)) {
-            source += "#"; // We only hope non-player object use hashtag
+            source.append("#"); // We only hope non-player object use hashtag
         }
-        source += e.getEntity().getName() + "-";
+        source.append(e.getEntity().getName()).append("-");
+        
         if (projectileSource instanceof Entity entity) {
-            if (projectileSource instanceof Mob mob && ((Mob) projectileSource).getTarget() != null) {
-                source += mob.getTarget().getName();
+            if (projectileSource instanceof Mob mob && mob.getTarget() != null) {
+                source.append(mob.getTarget().getName());
             } else {
-                source += entity.getName();
+                source.append(entity.getName());
             }
+        } else if (projectileSource instanceof Block block) {
+            source.append(block.getType().name());
         } else {
-            if (projectileSource instanceof Block block) {
-                source += block.getType().name();
-            } else {
-                source += projectileSource.getClass().getName();
-            }
+            source.append(projectileSource.getClass().getSimpleName());
         }
-        probablyCache.put(e.getEntity(), source);
-        probablyCache.put(projectileSource, source);
+        
+        String sourceStr = source.toString();
+        probablyCache.put(e.getEntity(), sourceStr);
+        probablyCache.put(projectileSource, sourceStr);
     }
 
     // TNT ignites by Player (listener)
@@ -240,17 +242,15 @@ public class Main extends JavaPlugin implements Listener {
         if (!(e.getEntity() instanceof EnderCrystal)) {
             return;
         }
-        if (e.getDamager() instanceof Player) {
-            probablyCache.put(e.getEntity(), e.getDamager().getName());
-        } else {
-            String sourceFromCache = probablyCache.getIfPresent(e.getDamager());
-            if (sourceFromCache != null) {
-                probablyCache.put(e.getEntity(), sourceFromCache);
-            } else if (e.getDamager() instanceof Projectile projectile) {
-                if (projectile.getShooter() != null && projectile.getShooter() instanceof Player player) {
-                    probablyCache.put(e.getEntity(), player.getName());
-                }
-            }
+        if (e.getDamager() instanceof Player player) {
+            probablyCache.put(e.getEntity(), player.getName());
+            return;
+        }
+        String sourceFromCache = probablyCache.getIfPresent(e.getDamager());
+        if (sourceFromCache != null) {
+            probablyCache.put(e.getEntity(), sourceFromCache);
+        } else if (e.getDamager() instanceof Projectile projectile && projectile.getShooter() instanceof Player player) {
+            probablyCache.put(e.getEntity(), player.getName());
         }
     }
 
@@ -317,16 +317,17 @@ public class Main extends JavaPlugin implements Listener {
 
     @EventHandler(ignoreCancelled = true, priority = EventPriority.LOWEST)
     public void onEntityHitByProjectile(EntityDamageByEntityEvent e) {
-        if (e.getDamager() instanceof Projectile projectile) {
-            if (projectile.getShooter() instanceof Player player) {
-                probablyCache.put(e.getEntity(), player.getName());
-                return;
-            }
-            String reason = probablyCache.getIfPresent(e.getDamager());
-            if (reason != null) {
-                probablyCache.put(e.getEntity(), reason);
-                return;
-            }
+        if (!(e.getDamager() instanceof Projectile projectile)) {
+            return;
+        }
+        if (projectile.getShooter() instanceof Player player) {
+            probablyCache.put(e.getEntity(), player.getName());
+            return;
+        }
+        String reason = probablyCache.getIfPresent(e.getDamager());
+        if (reason != null) {
+            probablyCache.put(e.getEntity(), reason);
+        } else {
             probablyCache.put(e.getEntity(), e.getDamager().getName());
         }
     }
