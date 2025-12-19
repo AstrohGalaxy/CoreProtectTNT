@@ -21,3 +21,7 @@ hanging:
   enable: true
   disable-unknown: false
   alert: "&cBlocked hanging destroy because that caused by unknown object."
+painting:
+  enable: true
+  disable-unknown: false
+  alert: "&cBlocked painting destroy because that caused by unknown object."
