@@ -26,12 +26,25 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.projectiles.ProjectileSource;
 
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 public class Main extends JavaPlugin implements Listener {
+    // Redstone components that can activate TNT
+    private static final Set<Material> REDSTONE_ACTIVATORS = Set.of(
+        Material.LEVER,
+        Material.STONE_BUTTON, Material.OAK_BUTTON, Material.SPRUCE_BUTTON,
+        Material.BIRCH_BUTTON, Material.JUNGLE_BUTTON, Material.ACACIA_BUTTON,
+        Material.DARK_OAK_BUTTON, Material.CRIMSON_BUTTON, Material.WARPED_BUTTON,
+        Material.POLISHED_BLACKSTONE_BUTTON,
+        Material.STONE_PRESSURE_PLATE, Material.OAK_PRESSURE_PLATE,
+        Material.SPRUCE_PRESSURE_PLATE, Material.BIRCH_PRESSURE_PLATE,
+        Material.JUNGLE_PRESSURE_PLATE, Material.ACACIA_PRESSURE_PLATE,
+        Material.DARK_OAK_PRESSURE_PLATE, Material.CRIMSON_PRESSURE_PLATE,
+        Material.WARPED_PRESSURE_PLATE, Material.POLISHED_BLACKSTONE_PRESSURE_PLATE,
+        Material.LIGHT_WEIGHTED_PRESSURE_PLATE, Material.HEAVY_WEIGHTED_PRESSURE_PLATE
+    );
+    
     private final Cache<Object, String> probablyCache = CacheBuilder
             .newBuilder()
             .expireAfterAccess(1, TimeUnit.HOURS)
@@ -139,34 +152,26 @@ public class Main extends JavaPlugin implements Listener {
         if (clickedBlock == null) {
             return;
         }
-        Material type = clickedBlock.getType();
         // Track redstone components that can activate TNT
-        if (type == Material.LEVER || type == Material.STONE_BUTTON || type == Material.OAK_BUTTON ||
-            type == Material.SPRUCE_BUTTON || type == Material.BIRCH_BUTTON || type == Material.JUNGLE_BUTTON ||
-            type == Material.ACACIA_BUTTON || type == Material.DARK_OAK_BUTTON || type == Material.CRIMSON_BUTTON ||
-            type == Material.WARPED_BUTTON || type == Material.POLISHED_BLACKSTONE_BUTTON ||
-            type == Material.STONE_PRESSURE_PLATE || type == Material.OAK_PRESSURE_PLATE ||
-            type == Material.SPRUCE_PRESSURE_PLATE || type == Material.BIRCH_PRESSURE_PLATE ||
-            type == Material.JUNGLE_PRESSURE_PLATE || type == Material.ACACIA_PRESSURE_PLATE ||
-            type == Material.DARK_OAK_PRESSURE_PLATE || type == Material.CRIMSON_PRESSURE_PLATE ||
-            type == Material.WARPED_PRESSURE_PLATE || type == Material.POLISHED_BLACKSTONE_PRESSURE_PLATE ||
-            type == Material.LIGHT_WEIGHTED_PRESSURE_PLATE || type == Material.HEAVY_WEIGHTED_PRESSURE_PLATE) {
-            probablyCache.put(clickedBlock.getLocation(), "#" + type.name().toLowerCase(Locale.ROOT) + "-" + e.getPlayer().getName());
+        if (REDSTONE_ACTIVATORS.contains(clickedBlock.getType())) {
+            probablyCache.put(clickedBlock.getLocation(), "#" + clickedBlock.getType().name().toLowerCase(Locale.ROOT) + "-" + e.getPlayer().getName());
         }
     }
 
     // Track dispenser activation for TNT dispensing
     @EventHandler(ignoreCancelled = true, priority = EventPriority.MONITOR)
     public void onBlockDispense(BlockDispenseEvent e) {
-        if (e.getItem().getType() == Material.TNT) {
-            String source = probablyCache.getIfPresent(e.getBlock().getLocation());
-            if (source != null) {
-                // Store the dispenser location with the player who activated it
-                Location tntLocation = e.getBlock().getRelative(
-                    ((org.bukkit.block.data.type.Dispenser) e.getBlock().getBlockData()).getFacing()
-                ).getLocation();
-                probablyCache.put(tntLocation, "#dispenser-" + source);
-            }
+        if (e.getItem().getType() != Material.TNT) {
+            return;
+        }
+        if (!(e.getBlock().getBlockData() instanceof org.bukkit.block.data.type.Dispenser dispenser)) {
+            return;
+        }
+        String source = probablyCache.getIfPresent(e.getBlock().getLocation());
+        if (source != null) {
+            // Store the dispenser location with the player who activated it
+            Location tntLocation = e.getBlock().getRelative(dispenser.getFacing()).getLocation();
+            probablyCache.put(tntLocation, "#dispenser-" + source);
         }
     }
 
