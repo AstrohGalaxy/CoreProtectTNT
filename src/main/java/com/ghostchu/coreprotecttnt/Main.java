@@ -81,7 +81,14 @@ public class Main extends JavaPlugin implements Listener {
         if (!(e.getRightClicked() instanceof Creeper)) {
             return;
         }
-        probablyCache.put(e.getRightClicked(), "#ignitecreeper-" + e.getPlayer().getName());
+        // Check if player is using flint and steel to ignite the creeper
+        ItemStack item = e.getPlayer().getInventory().getItemInMainHand();
+        if (item.getType() != Material.FLINT_AND_STEEL) {
+            item = e.getPlayer().getInventory().getItemInOffHand();
+        }
+        if (item.getType() == Material.FLINT_AND_STEEL) {
+            probablyCache.put(e.getRightClicked(), "#flintandsteel-" + e.getPlayer().getName());
+        }
     }
 
     // Block explode (logger)
@@ -120,6 +127,47 @@ public class Main extends JavaPlugin implements Listener {
         // We can't check the hanging in this event, may cause server lagging, just store it
         // Maybe a player break the tnt and a plugin igniting it?
         probablyCache.put(event.getBlock().getLocation(), event.getPlayer().getName());
+    }
+
+    // Track redstone components activation by players (for TNT activation tracking)
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.MONITOR)
+    public void onPlayerInteractRedstone(PlayerInteractEvent e) {
+        if (e.getAction() != Action.RIGHT_CLICK_BLOCK && e.getAction() != Action.PHYSICAL) {
+            return;
+        }
+        Block clickedBlock = e.getClickedBlock();
+        if (clickedBlock == null) {
+            return;
+        }
+        Material type = clickedBlock.getType();
+        // Track redstone components that can activate TNT
+        if (type == Material.LEVER || type == Material.STONE_BUTTON || type == Material.OAK_BUTTON ||
+            type == Material.SPRUCE_BUTTON || type == Material.BIRCH_BUTTON || type == Material.JUNGLE_BUTTON ||
+            type == Material.ACACIA_BUTTON || type == Material.DARK_OAK_BUTTON || type == Material.CRIMSON_BUTTON ||
+            type == Material.WARPED_BUTTON || type == Material.POLISHED_BLACKSTONE_BUTTON ||
+            type == Material.STONE_PRESSURE_PLATE || type == Material.OAK_PRESSURE_PLATE ||
+            type == Material.SPRUCE_PRESSURE_PLATE || type == Material.BIRCH_PRESSURE_PLATE ||
+            type == Material.JUNGLE_PRESSURE_PLATE || type == Material.ACACIA_PRESSURE_PLATE ||
+            type == Material.DARK_OAK_PRESSURE_PLATE || type == Material.CRIMSON_PRESSURE_PLATE ||
+            type == Material.WARPED_PRESSURE_PLATE || type == Material.POLISHED_BLACKSTONE_PRESSURE_PLATE ||
+            type == Material.LIGHT_WEIGHTED_PRESSURE_PLATE || type == Material.HEAVY_WEIGHTED_PRESSURE_PLATE) {
+            probablyCache.put(clickedBlock.getLocation(), "#" + type.name().toLowerCase(Locale.ROOT) + "-" + e.getPlayer().getName());
+        }
+    }
+
+    // Track dispenser activation for TNT dispensing
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.MONITOR)
+    public void onBlockDispense(BlockDispenseEvent e) {
+        if (e.getItem().getType() == Material.TNT) {
+            String source = probablyCache.getIfPresent(e.getBlock().getLocation());
+            if (source != null) {
+                // Store the dispenser location with the player who activated it
+                Location tntLocation = e.getBlock().getRelative(
+                    ((org.bukkit.block.data.type.Dispenser) e.getBlock().getBlockData()).getFacing()
+                ).getLocation();
+                probablyCache.put(tntLocation, "#dispenser-" + source);
+            }
+        }
     }
 
     // Player item put into ItemFrame / Rotate ItemFrame (logger)
