@@ -116,7 +116,7 @@ public class Main extends JavaPlugin implements Listener {
     }
 
     @EventHandler(ignoreCancelled = true, priority = EventPriority.MONITOR)
-    public void onBlockBreak(BlockPlaceEvent event) {
+    public void onBlockBreak(BlockBreakEvent event) {
         // We can't check the hanging in this event, may cause server lagging, just store it
         // Maybe a player break the tnt and a plugin igniting it?
         probablyCache.put(event.getBlock().getLocation(), event.getPlayer().getName());
@@ -289,19 +289,22 @@ public class Main extends JavaPlugin implements Listener {
         if (!section.getBoolean("enable", true)) {
             return;
         }
-        ItemFrame itemFrame = (ItemFrame) e.getEntity();
-        if (itemFrame.getItem().getType().isAir() || itemFrame.isInvulnerable()) {
-            return;
-        }
+        Painting painting = (Painting) e.getEntity();
 
         if (e.getDamager() instanceof Player) {
-            api.logInteraction(e.getDamager().getName(), itemFrame.getLocation());
-            api.logRemoval(e.getDamager().getName(), itemFrame.getLocation(), itemFrame.getItem().getType(), null);
+            api.logInteraction(e.getDamager().getName(), painting.getLocation());
+            Material paintingMaterial = Material.matchMaterial(painting.getType().name());
+            if (paintingMaterial != null) {
+                api.logRemoval(e.getDamager().getName(), painting.getLocation(), paintingMaterial, null);
+            }
         } else {
             String reason = probablyCache.getIfPresent(e.getDamager());
             if (reason != null) {
-                api.logInteraction("#" + e.getDamager().getName() + "-" + reason, itemFrame.getLocation());
-                api.logRemoval("#" + e.getDamager().getName() + "-" + reason, itemFrame.getLocation(), itemFrame.getItem().getType(), null);
+                api.logInteraction("#" + e.getDamager().getName() + "-" + reason, painting.getLocation());
+                Material paintingMaterial = Material.matchMaterial(painting.getType().name());
+                if (paintingMaterial != null) {
+                    api.logRemoval("#" + e.getDamager().getName() + "-" + reason, painting.getLocation(), paintingMaterial, null);
+                }
             } else {
                 if (section.getBoolean("disable-unknown")) {
                     e.setCancelled(true);
